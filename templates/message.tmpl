@@ -1,0 +1,69 @@
+<?php
+/**
+* Generated with protoc-gen-php8. DO NOT EDIT!
+*/
+namespace {{.Namespace}};
+
+{{range .Dependencies -}}
+use {{.}};
+{{end}}
+// @@protoc_insertion_point(message::use_scope)
+
+class {{.ClassName}} extends Message
+{
+    // @@protoc_insertion_point(message::trait_scope)
+{{range .Properties}}
+    {{- if .Repeated}}
+    /**
+    * @var {{.CommentPropertyType}}
+    */
+    {{- end}}
+    protected {{.PropertyType}} ${{.PropertyName}}{{if not .IsEnum}} = {{.PropertyDefault}}{{end}};
+{{end}}
+    public function __construct(?array $data = null) {
+        {{range .Enums -}}
+        $this->{{.PropertyName}} = {{.PropertyType}}::from(0);
+        {{end}}
+        parent::__construct($data);
+    }
+{{range .Properties}}
+    {{- if .Repeated}}
+    /**
+    * @return {{.CommentPropertyType}}
+    */
+    {{- end}}
+    public function get{{.AccessorName}}(): {{.PropertyType}}{{if .IsEnum}}|int{{end}} {
+        {{- if .IsEnum}}
+        if (debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2)[1]['class'] === "Google\\Protobuf\\Internal\\Message") {
+            return $this->mySecondEnum->value;
+        }
+        {{- end}}
+        return $this->{{.PropertyName}};
+    }
+    {{if and (.IsObject) (not .IsEnum)}}
+    public function has{{.AccessorName}}(): bool {
+        return isset($this->{{.PropertyName}});
+    }
+    {{- end}}
+    {{if .Repeated}}/**
+    * @param {{if not .IsMap}}{{.CommentPropertyType}}{{else}}array<{{(.Dependency.FindProperty "key").Type}}, {{(.Dependency.FindProperty "value").Type}}>{{end}} $value
+    * @throws \Exception
+    */
+    {{- end}}
+    public function set{{.AccessorName}}({{.PropertyType}}{{if .IsEnum}}|int{{end}} $value): {{$.ClassName}} {
+        {{- if and (.Repeated) (not .IsMap)}}
+        $value = GPBUtil::checkRepeatedField($value, GPBType::MESSAGE, {{.Type}}::class);
+        {{- else if .IsMap}}
+        $value = GPBUtil::checkMapField($value, GPBType::{{(.Dependency.FindProperty "key").ProtoType}}, GPBType::{{(.Dependency.FindProperty "value").ProtoType}}{{if (eq (.Dependency.FindProperty "value").ProtoType "MESSAGE")}}, {{.Type}}::class{{end}});
+        {{- else if .IsEnum}}
+        if (is_int($value)) {
+            $value = {{.PropertyType}}::from($value);
+        }
+        {{- end}}
+        $this->{{.PropertyName}} = $value;
+
+        return $this;
+    }
+{{end}}
+    // @@protoc_insertion_point(message::class_scope)
+}

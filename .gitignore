@@ -1,0 +1,5 @@
+.idea
+gen
+protoc-gen-php8
+protoc-gen-php8.exe
+protobuf

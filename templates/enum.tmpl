@@ -1,0 +1,31 @@
+<?php
+/**
+* Generated with protoc-gen-php8. DO NOT EDIT!
+*/
+namespace {{.Namespace}};
+
+// @@protoc_insertion_point(enum::use_scope)
+
+enum {{.ClassName}}: int
+{
+    // @@protoc_insertion_point(enum::trait_scope)
+{{range .EnumValues}}
+    case {{.Name}} = {{.Number}};
+{{- end}}
+
+    public static function name(int $value): string {
+        return self::from($value)->name
+    }
+
+    public static function value(string $name): int {
+        foreach (self::cases() as $case) {
+            if ($case->name === $name) {
+                return $case->value;
+            }
+        }
+        $class = __CLASS__;
+        throw new UnexpectedValueException("Enum {$class} has no value defined for name {$name}"));
+    }
+
+    // @@protoc_insertion_point(enum::class_scope)
+}
