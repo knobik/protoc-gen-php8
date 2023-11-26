@@ -213,10 +213,6 @@ func (p *Property) PropertyType() string {
 		return "array|RepeatedField"
 	}
 
-	//if p.IsEnum() {
-	//    return p.Type + "|int"
-	//}
-
 	return p.Type
 }
 
