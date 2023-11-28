@@ -11,19 +11,18 @@ class {{.ClassName}}
 {
     // @@protoc_insertion_point(metadata::trait_scope)
 
-    public static $is_initialized = false;
+    public static $isInitialized = false;
 
     public static function initOnce() {
-        $pool = DescriptorPool::getGeneratedPool();
-
-        if (static::$is_initialized == true) {
+        if (static::$isInitialized == true) {
           return;
         }
 
         // encoded .proto file
-        $pool->internalAddGeneratedFile(base64_decode('{{- .MessageAsBase64String -}}', true), true);
+        DescriptorPool::getGeneratedPool()
+            ->internalAddGeneratedFile(base64_decode('{{- .MessageAsBase64String -}}', true), true);
 
-        static::$is_initialized = true;
+        static::$isInitialized = true;
     }
 
     // @@protoc_insertion_point(metadata::class_scope)
