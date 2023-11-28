@@ -3,14 +3,10 @@ package main
 import (
 	"bytes"
 	"embed"
-	"encoding/base64"
 	"errors"
 	"fmt"
-	"github.com/iancoleman/strcase"
 	recurparse "github.com/karelbilek/template-parse-recursive"
 	"github.com/sanity-io/litter"
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
 	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/descriptorpb"
 	"google.golang.org/protobuf/types/pluginpb"
@@ -18,7 +14,7 @@ import (
 	"io/fs"
 	"log"
 	"os"
-	"path/filepath"
+	"protoc-gen-php8/protoabs"
 	"slices"
 	"strings"
 	"text/template"
@@ -27,262 +23,8 @@ import (
 //go:embed templates/*
 var templateFiles embed.FS
 
-var (
-	PHPIncludeMap = map[ClassType]string{
-		CTypeMessage: "Google\\Protobuf\\Internal\\Message",
-	}
-
-	ClassTypeTemplateMap = map[ClassType]string{
-		CTypeMessage: "message.tmpl",
-		CTypeEnum:    "enum.tmpl",
-	}
-
-	objectRefClassMap = map[string]*Class{}
-)
-
-type MetadataFile struct {
-	name              string
-	metadataNamespace string
-	fileDescriptorSet *descriptorpb.FileDescriptorSet
-}
-
-func (m *MetadataFile) ClassName() string {
-	return strcase.ToCamel(strings.ReplaceAll(filepath.Base(m.name), ".proto", ""))
-}
-
-func (m *MetadataFile) MessageAsString() string {
-	out, err := proto.Marshal(m.fileDescriptorSet)
-	if err != nil {
-		panic(err)
-	}
-
-	return string(out)
-}
-
-func (m *MetadataFile) MessageAsBase64String() string {
-	return base64.StdEncoding.EncodeToString([]byte(m.MessageAsString()))
-}
-
-func (m *MetadataFile) Namespace() string {
-	return m.metadataNamespace
-}
-
-func (m *MetadataFile) PHPClassDirectory() string {
-	return strings.Join(strings.Split(m.Namespace(), "\\"), "/")
-}
-
-func (m *MetadataFile) PHPClassFilename() string {
-	return fmt.Sprintf("%s/%s.php", m.PHPClassDirectory(), m.ClassName())
-}
-
-func (m *MetadataFile) FQN() string {
-	return m.Namespace() + "\\" + m.ClassName()
-}
-
-type ProtoFile struct {
-	Name    string
-	Package string
-	Classes []*Class
-}
-
-type ClassType int
-
-const (
-	CTypeMessage ClassType = iota
-	CTypeEnum    ClassType = iota
-)
-
-type EnumValue struct {
-	Name   string
-	Number int
-}
-
-type Class struct {
-	File          *ProtoFile
-	Parent        *Class
-	Name          string
-	BaseNamespace string
-	ClassPrefix   string
-	Type          ClassType
-	Properties    []*Property
-	EnumValues    []*EnumValue
-	Dependencies  []string
-	Metadata      *MetadataFile
-	options       *descriptorpb.MessageOptions
-}
-
-func (c *Class) IsMapEntry() bool {
-	if c.options != nil {
-		return c.options.GetMapEntry()
-	}
-
-	return false
-}
-
-func (c *Class) IsEnum() bool {
-	return c.Type == CTypeEnum
-}
-
-func (c *Class) Enums() []*Property {
-	var list []*Property
-	for _, p := range c.Properties {
-		if p.IsEnum() {
-			list = append(list, p)
-		}
-	}
-
-	return list
-}
-
-func (c *Class) FindProperty(name string) *Property {
-	for _, p := range c.Properties {
-		if p.Name == name {
-			return p
-		}
-	}
-
-	return nil
-}
-
-func (c *Class) addDependency(dependency string) string {
-	alias, base := c.aliasDependency(dependency)
-	for _, include := range c.Dependencies {
-		if include == alias {
-			return base
-		}
-	}
-
-	c.Dependencies = append(c.Dependencies, alias)
-
-	return base
-}
-
-func (c *Class) aliasDependency(dependency string) (string, string) {
-	base := FQNBasename(dependency)
-	count := 0
-	for _, include := range c.Dependencies {
-		includeBase := FQNBasename(include)
-		if includeBase == base && dependency != include {
-			count++
-		}
-	}
-	if count > 0 {
-		base = fmt.Sprintf("%s%d", base, count)
-		dependency += " as " + base
-	}
-
-	return dependency, base
-}
-
-func (c *Class) ClassName() string {
-	return c.ClassPrefix + c.Name
-}
-
-func (c *Class) Namespace() string {
-	if c.Parent != nil {
-		return c.Parent.Namespace() + "\\" + c.Parent.ClassName()
-	}
-
-	return c.BaseNamespace
-}
-
-func (c *Class) PHPClassDirectory() string {
-	return strings.Join(strings.Split(c.Namespace(), "\\"), "/")
-}
-
-func (c *Class) PHPClassFilename() string {
-	return fmt.Sprintf("%s/%s.php", c.PHPClassDirectory(), c.ClassName())
-}
-
-func (c *Class) FQN() string {
-	if c.Parent != nil {
-		return c.Parent.FQN() + "\\" + c.ClassName()
-	}
-	return c.Namespace() + "\\" + c.ClassName()
-}
-
-func (c *Class) Package() string {
-	if c.Parent != nil {
-		return fmt.Sprintf("%s.%s", c.Parent.Package(), c.Name)
-	}
-
-	return fmt.Sprintf("%s.%s", c.File.Package, c.Name)
-}
-
-type Property struct {
-	Number    int
-	Name      string
-	Type      string
-	ProtoType string
-	Repeated  bool
-	ObjectRef string
-}
-
-func (p *Property) IsMap() bool {
-	if dep := p.Dependency(); dep != nil {
-		return dep.IsMapEntry()
-	}
-
-	return false
-}
-
-func (p *Property) IsEnum() bool {
-	if dep := p.Dependency(); dep != nil {
-		return dep.IsEnum()
-	}
-
-	return false
-}
-
-func (p *Property) Dependency() *Class {
-	if p.ObjectRef == "" {
-		return nil
-	}
-
-	return objectRefClassMap[p.ObjectRef]
-}
-
-func (p *Property) PropertyName() string {
-	return strcase.ToLowerCamel(p.Name)
-}
-
-func (p *Property) PropertyType() string {
-	if p.IsMap() {
-		return "array|MapField"
-	}
-
-	if p.Repeated {
-		return "array|RepeatedField"
-	}
-
-	return p.Type
-}
-
-func (p *Property) PropertyDefault() string {
-	return phpDefault(p)
-}
-
-func (p *Property) CommentPropertyType() string {
-	if p.IsMap() {
-		return p.PropertyType()
-	}
-
-	return strings.ReplaceAll(p.PropertyType(), "array", p.Type+"[]")
-}
-
-func (p *Property) AccessorName() string {
-	return strcase.ToCamel(p.Name)
-}
-
-func (p *Property) IsObject() bool {
-	return p.ObjectRef != ""
-}
-
-func parseProtoFile(desc *descriptorpb.FileDescriptorProto) *ProtoFile {
-	f := &ProtoFile{
-		Name:    desc.GetName(),
-		Package: desc.GetPackage(),
-	}
+func parseProtoFile(desc *descriptorpb.FileDescriptorProto) *protoabs.ProtoFile {
+	f := protoabs.NewProtoFile(desc.GetName(), desc.GetPackage())
 
 	for _, message := range desc.GetMessageType() {
 		f.Classes = append(f.Classes, parseMessage(f, desc.GetOptions(), message, nil))
@@ -295,55 +37,18 @@ func parseProtoFile(desc *descriptorpb.FileDescriptorProto) *ProtoFile {
 	return f
 }
 
-func parseEnum(f *ProtoFile, options *descriptorpb.FileOptions, enum *descriptorpb.EnumDescriptorProto, parent *Class) *Class {
-	c := newClass(CTypeEnum, f, options, enum.GetName(), nil, parent)
+func parseEnum(f *protoabs.ProtoFile, options *descriptorpb.FileOptions, enum *descriptorpb.EnumDescriptorProto, parent *protoabs.Class) *protoabs.Class {
+	c := protoabs.NewClass(protoabs.CTypeEnum, f, options, enum.GetName(), nil, parent)
 
 	for _, ev := range enum.GetValue() {
-		c.EnumValues = append(c.EnumValues, newEnumValue(ev))
+		c.EnumValues = append(c.EnumValues, protoabs.NewEnumValue(ev))
 	}
 
 	return c
 }
 
-func newEnumValue(ev *descriptorpb.EnumValueDescriptorProto) *EnumValue {
-	return &EnumValue{
-		Name:   ev.GetName(),
-		Number: int(ev.GetNumber()),
-	}
-}
-
-func newClass(st ClassType, file *ProtoFile, options *descriptorpb.FileOptions, name string, mo *descriptorpb.MessageOptions, parent *Class) *Class {
-	ns := options.GetPhpNamespace()
-	if ns == "" {
-		ns = packageToNamespace(file.Package)
-	}
-
-	c := &Class{
-		File:          file,
-		Parent:        parent,
-		Name:          name,
-		Type:          st,
-		BaseNamespace: ns,
-		ClassPrefix:   options.GetPhpClassPrefix(),
-		options:       mo,
-	}
-	c.addDependency(PHPIncludeMap[st])
-
-	objectRefClassMap["."+c.Package()] = c
-
-	return c
-}
-
-func packageToNamespace(pack string) string {
-	parts := strings.Split(pack, ".")
-	for i, p := range parts {
-		parts[i] = cases.Title(language.Und, cases.NoLower).String(p)
-	}
-	return strings.Join(parts, "\\")
-}
-
-func parseMessage(f *ProtoFile, options *descriptorpb.FileOptions, message *descriptorpb.DescriptorProto, parent *Class) *Class {
-	c := newClass(CTypeMessage, f, options, message.GetName(), message.GetOptions(), parent)
+func parseMessage(f *protoabs.ProtoFile, options *descriptorpb.FileOptions, message *descriptorpb.DescriptorProto, parent *protoabs.Class) *protoabs.Class {
+	c := protoabs.NewClass(protoabs.CTypeMessage, f, options, message.GetName(), message.GetOptions(), parent)
 
 	for _, field := range message.GetField() {
 		c.Properties = append(c.Properties, parseField(field))
@@ -360,8 +65,8 @@ func parseMessage(f *ProtoFile, options *descriptorpb.FileOptions, message *desc
 	return c
 }
 
-func parseField(field *descriptorpb.FieldDescriptorProto) *Property {
-	return &Property{
+func parseField(field *descriptorpb.FieldDescriptorProto) *protoabs.Property {
+	return &protoabs.Property{
 		Number:    int(field.GetNumber()),
 		Name:      field.GetName(),
 		Type:      phpProtoType(field.GetType()),
@@ -371,12 +76,12 @@ func parseField(field *descriptorpb.FieldDescriptorProto) *Property {
 	}
 }
 
-func generateClassesFiles(t *template.Template, f *ProtoFile) []*pluginpb.CodeGeneratorResponse_File {
+func generateClassesFiles(t *template.Template, f *protoabs.ProtoFile) []*pluginpb.CodeGeneratorResponse_File {
 	var files []*pluginpb.CodeGeneratorResponse_File
 	for _, c := range f.Classes {
 		var buffer bytes.Buffer
 
-		if err := t.ExecuteTemplate(&buffer, ClassTypeTemplateMap[c.Type], c); err != nil {
+		if err := t.ExecuteTemplate(&buffer, protoabs.ClassTypeTemplateMap[c.Type], c); err != nil {
 			panic(err)
 		}
 
@@ -392,7 +97,7 @@ func generateClassesFiles(t *template.Template, f *ProtoFile) []*pluginpb.CodeGe
 	return files
 }
 
-func generateMetadataFile(t *template.Template, m *MetadataFile) []*pluginpb.CodeGeneratorResponse_File {
+func generateMetadataFile(t *template.Template, m *protoabs.MetadataFile) []*pluginpb.CodeGeneratorResponse_File {
 	var buffer bytes.Buffer
 
 	if err := t.ExecuteTemplate(&buffer, "metadata.tmpl", m); err != nil {
@@ -436,85 +141,36 @@ func phpProtoType(t descriptorpb.FieldDescriptorProto_Type) string {
 	return m[stringProtoType(t)]
 }
 
-func phpDefault(p *Property) string {
-	t := p.Type
-	if p.IsEnum() {
-		t = "int"
-	}
-
-	switch t {
-	case "string":
-		return "''"
-	case "int":
-		return "0"
-	case "float":
-		return "0.0"
-	case "bool":
-		return "false"
-	default:
-		return "null"
-	}
-}
-
-func FQNBasename(fqn string) string {
-	parts := strings.Split(fqn, "\\")
-	return parts[len(parts)-1]
-}
-
-func fillDependencies(files []*ProtoFile) {
+func fillDependencies(files []*protoabs.ProtoFile) {
 	for _, f := range files {
 		for _, c := range f.Classes {
 			for _, p := range c.Properties {
 				// map
 				if p.IsMap() == true {
-					c.addDependency("Google\\Protobuf\\Internal\\MapField")
-					c.addDependency("Google\\Protobuf\\Internal\\GPBType")
-					c.addDependency("Google\\Protobuf\\Internal\\GPBUtil")
+					c.AddDependency("Google\\Protobuf\\Internal\\MapField")
+					c.AddDependency("Google\\Protobuf\\Internal\\GPBType")
+					c.AddDependency("Google\\Protobuf\\Internal\\GPBUtil")
 
 					// if the value is a class, add it as dependency
 					if vd := p.Dependency().FindProperty("value").Dependency(); vd != nil {
-						p.Type = c.addDependency(vd.FQN())
+						p.Type = c.AddDependency(vd.FQN())
 					}
 				}
 
 				// repeated only
 				if p.Repeated && p.IsMap() == false {
-					c.addDependency("Google\\Protobuf\\Internal\\RepeatedField")
-					c.addDependency("Google\\Protobuf\\Internal\\GPBType")
-					c.addDependency("Google\\Protobuf\\Internal\\GPBUtil")
+					c.AddDependency("Google\\Protobuf\\Internal\\RepeatedField")
+					c.AddDependency("Google\\Protobuf\\Internal\\GPBType")
+					c.AddDependency("Google\\Protobuf\\Internal\\GPBUtil")
 				}
 
 				// normal classes
 				if p.Dependency() != nil && p.IsMap() == false {
-					p.Type = c.addDependency(p.Dependency().FQN())
+					p.Type = c.AddDependency(p.Dependency().FQN())
 				}
 			}
 		}
 	}
-}
-
-func newMetadataFile(desc *descriptorpb.FileDescriptorProto, pf *ProtoFile) *MetadataFile {
-	clonedDesc := proto.Clone(desc).(*descriptorpb.FileDescriptorProto)
-	clonedDesc.SourceCodeInfo = nil
-
-	ns := desc.GetOptions().GetPhpMetadataNamespace()
-	if ns == "" {
-		ns = packageToNamespace("GPBMetadata." + desc.GetPackage())
-	}
-
-	set := []*descriptorpb.FileDescriptorProto{clonedDesc}
-	m := &MetadataFile{
-		name:              desc.GetName(),
-		metadataNamespace: ns,
-		fileDescriptorSet: &descriptorpb.FileDescriptorSet{File: set},
-	}
-
-	for _, c := range pf.Classes {
-		c.Metadata = m
-		c.addDependency(m.FQN())
-	}
-
-	return m
 }
 
 func main() {
@@ -529,8 +185,8 @@ func main() {
 		panic(err)
 	}
 
-	var files []*ProtoFile
-	var metadataFiles []*MetadataFile
+	var files []*protoabs.ProtoFile
+	var metadataFiles []*protoabs.MetadataFile
 
 	for _, protoFile := range request.GetProtoFile() {
 		if protoFile.GetSyntax() != "proto3" {
@@ -539,7 +195,7 @@ func main() {
 
 		pf := parseProtoFile(protoFile)
 		files = append(files, pf)
-		metadataFiles = append(metadataFiles, newMetadataFile(protoFile, pf))
+		metadataFiles = append(metadataFiles, protoabs.NewMetadataFile(protoFile, pf))
 	}
 
 	fillDependencies(files)
