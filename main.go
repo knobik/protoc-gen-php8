@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"embed"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"github.com/iancoleman/strcase"
 	recurparse "github.com/karelbilek/template-parse-recursive"
@@ -533,6 +534,10 @@ func main() {
 	var metadataFiles []*MetadataFile
 
 	for _, protoFile := range request.GetProtoFile() {
+		if protoFile.GetSyntax() != "proto3" {
+			panic(errors.New("only proto3 syntax is supported"))
+		}
+
 		pf := parseProtoFile(protoFile)
 		files = append(files, pf)
 		metadataFiles = append(metadataFiles, newMetadataFile(protoFile, pf))
