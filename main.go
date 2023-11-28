@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"embed"
+	"encoding/base64"
 	"fmt"
 	"github.com/iancoleman/strcase"
 	recurparse "github.com/karelbilek/template-parse-recursive"
@@ -16,6 +17,7 @@ import (
 	"io/fs"
 	"log"
 	"os"
+	"path/filepath"
 	"slices"
 	"strings"
 	"text/template"
@@ -37,6 +39,45 @@ var (
 	objectRefClassMap = map[string]*Class{}
 )
 
+type MetadataFile struct {
+	name              string
+	metadataNamespace string
+	fileDescriptorSet *descriptorpb.FileDescriptorSet
+}
+
+func (m *MetadataFile) ClassName() string {
+	return strcase.ToCamel(strings.ReplaceAll(filepath.Base(m.name), ".proto", ""))
+}
+
+func (m *MetadataFile) MessageAsString() string {
+	out, err := proto.Marshal(m.fileDescriptorSet)
+	if err != nil {
+		panic(err)
+	}
+
+	return string(out)
+}
+
+func (m *MetadataFile) MessageAsBase64String() string {
+	return base64.StdEncoding.EncodeToString([]byte(m.MessageAsString()))
+}
+
+func (m *MetadataFile) Namespace() string {
+	return m.metadataNamespace
+}
+
+func (m *MetadataFile) PHPClassDirectory() string {
+	return strings.Join(strings.Split(m.Namespace(), "\\"), "/")
+}
+
+func (m *MetadataFile) PHPClassFilename() string {
+	return fmt.Sprintf("%s/%s.php", m.PHPClassDirectory(), m.ClassName())
+}
+
+func (m *MetadataFile) FQN() string {
+	return m.Namespace() + "\\" + m.ClassName()
+}
+
 type ProtoFile struct {
 	Name    string
 	Package string
@@ -56,17 +97,17 @@ type EnumValue struct {
 }
 
 type Class struct {
-	File              *ProtoFile
-	Parent            *Class
-	Name              string
-	BaseNamespace     string
-	MetadataNamespace string
-	ClassPrefix       string
-	Type              ClassType
-	Properties        []*Property
-	EnumValues        []*EnumValue
-	Dependencies      []string
-	options           *descriptorpb.MessageOptions
+	File          *ProtoFile
+	Parent        *Class
+	Name          string
+	BaseNamespace string
+	ClassPrefix   string
+	Type          ClassType
+	Properties    []*Property
+	EnumValues    []*EnumValue
+	Dependencies  []string
+	Metadata      *MetadataFile
+	options       *descriptorpb.MessageOptions
 }
 
 func (c *Class) IsMapEntry() bool {
@@ -277,14 +318,13 @@ func newClass(st ClassType, file *ProtoFile, options *descriptorpb.FileOptions, 
 	}
 
 	c := &Class{
-		File:              file,
-		Parent:            parent,
-		Name:              name,
-		Type:              st,
-		BaseNamespace:     ns,
-		MetadataNamespace: options.GetPhpMetadataNamespace(),
-		ClassPrefix:       options.GetPhpClassPrefix(),
-		options:           mo,
+		File:          file,
+		Parent:        parent,
+		Name:          name,
+		Type:          st,
+		BaseNamespace: ns,
+		ClassPrefix:   options.GetPhpClassPrefix(),
+		options:       mo,
 	}
 	c.addDependency(PHPIncludeMap[st])
 
@@ -347,6 +387,22 @@ func generateClassesFiles(t *template.Template, f *ProtoFile) []*pluginpb.CodeGe
 		}
 		files = append(files, file)
 	}
+
+	return files
+}
+
+func generateMetadataFile(t *template.Template, m *MetadataFile) []*pluginpb.CodeGeneratorResponse_File {
+	var buffer bytes.Buffer
+
+	if err := t.ExecuteTemplate(&buffer, "metadata.tmpl", m); err != nil {
+		panic(err)
+	}
+
+	file := &pluginpb.CodeGeneratorResponse_File{
+		Name:    proto.String(m.PHPClassFilename()),
+		Content: proto.String(buffer.String()),
+	}
+	files := []*pluginpb.CodeGeneratorResponse_File{file}
 
 	return files
 }
@@ -436,6 +492,31 @@ func fillDependencies(files []*ProtoFile) {
 	}
 }
 
+func newMetadataFile(desc *descriptorpb.FileDescriptorProto, pf *ProtoFile) *MetadataFile {
+	clonedDesc := proto.Clone(desc).(*descriptorpb.FileDescriptorProto)
+	clonedDesc.SourceCodeInfo = nil
+	//clonedDesc.Options = nil
+
+	ns := desc.GetOptions().GetPhpMetadataNamespace()
+	if ns == "" {
+		ns = packageToNamespace("GPBMetadata." + desc.GetPackage())
+	}
+
+	set := []*descriptorpb.FileDescriptorProto{clonedDesc}
+	m := &MetadataFile{
+		name:              desc.GetName(),
+		metadataNamespace: ns,
+		fileDescriptorSet: &descriptorpb.FileDescriptorSet{File: set},
+	}
+
+	for _, c := range pf.Classes {
+		c.Metadata = m
+		c.addDependency(m.FQN())
+	}
+
+	return m
+}
+
 func main() {
 	input, err := io.ReadAll(os.Stdin)
 	if err != nil {
@@ -449,8 +530,12 @@ func main() {
 	}
 
 	var files []*ProtoFile
+	var metadataFiles []*MetadataFile
+
 	for _, protoFile := range request.GetProtoFile() {
-		files = append(files, parseProtoFile(protoFile))
+		pf := parseProtoFile(protoFile)
+		files = append(files, pf)
+		metadataFiles = append(metadataFiles, newMetadataFile(protoFile, pf))
 	}
 
 	fillDependencies(files)
@@ -465,6 +550,9 @@ func main() {
 		if slices.Contains(request.GetFileToGenerate(), file.Name) {
 			resultFiles = append(resultFiles, generateClassesFiles(t, file)...)
 		}
+	}
+	for _, metadataFile := range metadataFiles {
+		resultFiles = append(resultFiles, generateMetadataFile(t, metadataFile)...)
 	}
 
 	response := pluginpb.CodeGeneratorResponse{

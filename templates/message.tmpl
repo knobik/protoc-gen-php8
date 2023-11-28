@@ -18,12 +18,13 @@ class {{.ClassName}} extends Message
     * @var {{.CommentPropertyType}}
     */
     {{- end}}
-    protected {{.PropertyType}} ${{.PropertyName}}{{if not .IsEnum}} = {{.PropertyDefault}}{{end}};
+    protected {{if and (.IsObject) (not .IsEnum)}}?{{end}}{{.PropertyType}} ${{.PropertyName}}{{if not .IsEnum}} = {{.PropertyDefault}}{{end}};
 {{end}}
     public function __construct(?array $data = null) {
         {{range .Enums -}}
         $this->{{.PropertyName}} = {{.PropertyType}}::from(0);
-        {{end}}
+        {{end -}}
+        {{.Metadata.ClassName}}::initOnce();
         parent::__construct($data);
     }
 {{range .Properties}}
@@ -35,7 +36,7 @@ class {{.ClassName}} extends Message
     public function get{{.AccessorName}}(): {{.PropertyType}}{{if .IsEnum}}|int{{end}} {
         {{- if .IsEnum}}
         if (debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2)[1]['class'] === "Google\\Protobuf\\Internal\\Message") {
-            return $this->mySecondEnum->value;
+            return $this->{{.PropertyName}}->value;
         }
         {{- end}}
         return $this->{{.PropertyName}};

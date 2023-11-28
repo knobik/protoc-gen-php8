@@ -4,6 +4,7 @@
 */
 namespace {{.Namespace}};
 
+use UnexpectedValueException;
 // @@protoc_insertion_point(enum::use_scope)
 
 enum {{.ClassName}}: int
@@ -14,7 +15,7 @@ enum {{.ClassName}}: int
 {{- end}}
 
     public static function name(int $value): string {
-        return self::from($value)->name
+        return self::from($value)->name;
     }
 
     public static function value(string $name): int {
@@ -24,7 +25,7 @@ enum {{.ClassName}}: int
             }
         }
         $class = __CLASS__;
-        throw new UnexpectedValueException("Enum {$class} has no value defined for name {$name}"));
+        throw new UnexpectedValueException("Enum {$class} has no value defined for name {$name}");
     }
 
     // @@protoc_insertion_point(enum::class_scope)

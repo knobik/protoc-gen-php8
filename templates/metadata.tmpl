@@ -1,0 +1,30 @@
+<?php
+/**
+* Generated with protoc-gen-php8. DO NOT EDIT!
+*/
+namespace {{.Namespace}};
+
+use Google\Protobuf\Internal\DescriptorPool;
+// @@protoc_insertion_point(metadata::use_scope)
+
+class {{.ClassName}}
+{
+    // @@protoc_insertion_point(metadata::trait_scope)
+
+    public static $is_initialized = false;
+
+    public static function initOnce() {
+        $pool = DescriptorPool::getGeneratedPool();
+
+        if (static::$is_initialized == true) {
+          return;
+        }
+
+        // encoded .proto file
+        $pool->internalAddGeneratedFile(base64_decode('{{- .MessageAsBase64String -}}', true), true);
+
+        static::$is_initialized = true;
+    }
+
+    // @@protoc_insertion_point(metadata::class_scope)
+}
