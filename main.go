@@ -496,7 +496,6 @@ func fillDependencies(files []*ProtoFile) {
 func newMetadataFile(desc *descriptorpb.FileDescriptorProto, pf *ProtoFile) *MetadataFile {
 	clonedDesc := proto.Clone(desc).(*descriptorpb.FileDescriptorProto)
 	clonedDesc.SourceCodeInfo = nil
-	//clonedDesc.Options = nil
 
 	ns := desc.GetOptions().GetPhpMetadataNamespace()
 	if ns == "" {
