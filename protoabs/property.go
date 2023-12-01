@@ -6,12 +6,14 @@ import (
 )
 
 type Property struct {
-	Number    int
-	Name      string
-	Type      string
-	ProtoType string
-	Repeated  bool
-	ObjectRef string
+	Number     int
+	Name       string
+	Type       string
+	ProtoType  string
+	Repeated   bool
+	ObjectRef  string
+	IsOneOf    bool
+	IsOptional bool
 }
 
 func (p *Property) IsMap() bool {

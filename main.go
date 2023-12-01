@@ -5,6 +5,7 @@ import (
 	"embed"
 	"errors"
 	"fmt"
+	"github.com/iancoleman/strcase"
 	recurparse "github.com/karelbilek/template-parse-recursive"
 	"github.com/sanity-io/litter"
 	"google.golang.org/protobuf/proto"
@@ -54,6 +55,10 @@ func parseMessage(f *protoabs.ProtoFile, options *descriptorpb.FileOptions, mess
 		c.Properties = append(c.Properties, parseField(field))
 	}
 
+	for _, oneof := range message.GetOneofDecl() {
+		c.OneOfProperties = append(c.OneOfProperties, parseOneOfField(oneof))
+	}
+
 	for _, nested := range message.GetNestedType() {
 		f.Classes = append(f.Classes, parseMessage(f, options, nested, c))
 	}
@@ -65,14 +70,20 @@ func parseMessage(f *protoabs.ProtoFile, options *descriptorpb.FileOptions, mess
 	return c
 }
 
+func parseOneOfField(desc *descriptorpb.OneofDescriptorProto) string {
+	return desc.GetName()
+}
+
 func parseField(field *descriptorpb.FieldDescriptorProto) *protoabs.Property {
 	return &protoabs.Property{
-		Number:    int(field.GetNumber()),
-		Name:      field.GetName(),
-		Type:      phpProtoType(field.GetType()),
-		ProtoType: stringProtoType(field.GetType()),
-		ObjectRef: field.GetTypeName(),
-		Repeated:  field.GetLabel() == descriptorpb.FieldDescriptorProto_LABEL_REPEATED,
+		Name:       field.GetName(),
+		Type:       phpProtoType(field.GetType()),
+		ProtoType:  stringProtoType(field.GetType()),
+		ObjectRef:  field.GetTypeName(),
+		Repeated:   field.GetLabel() == descriptorpb.FieldDescriptorProto_LABEL_REPEATED,
+		Number:     int(field.GetNumber()),
+		IsOneOf:    field.OneofIndex != nil, // only this returns nil
+		IsOptional: field.GetProto3Optional(),
 	}
 }
 
@@ -217,7 +228,7 @@ func main() {
 
 	response := pluginpb.CodeGeneratorResponse{
 		Error:             nil,
-		SupportedFeatures: proto.Uint64(uint64(pluginpb.CodeGeneratorResponse_FEATURE_NONE)),
+		SupportedFeatures: proto.Uint64(uint64(pluginpb.CodeGeneratorResponse_FEATURE_PROTO3_OPTIONAL)),
 		File:              resultFiles,
 	}
 	out, err := proto.Marshal(&response)
@@ -234,28 +245,31 @@ func main() {
 func getTemplates() (*template.Template, error) {
 	templateDir, _ := fs.Sub(templateFiles, "templates")
 	t := template.New("templates")
-	//t.Funcs(template.FuncMap{
-	//    "templateOrDefault": func(path string, data any) string {
-	//        var buffer bytes.Buffer
-	//        if t.Lookup(path) == nil {
-	//            path = "message/property/default.tmpl"
-	//        }
-	//        if err := t.ExecuteTemplate(&buffer, path, data); err != nil {
-	//            panic(err)
-	//        }
-	//        return buffer.String()
-	//    },
-	//    "templateIfExists": func(path string, data any) string {
-	//        var buffer bytes.Buffer
-	//        if err := t.ExecuteTemplate(&buffer, path, data); err != nil {
-	//            panic(err)
-	//        }
-	//        return buffer.String()
-	//    },
-	//    "templateExists": func(path string) bool {
-	//        return t.Lookup(path) != nil
-	//    },
-	//})
+	t.Funcs(template.FuncMap{
+		"toCamel": func(input string) string {
+			return strcase.ToCamel(input)
+		},
+		//    "templateOrDefault": func(path string, data any) string {
+		//        var buffer bytes.Buffer
+		//        if t.Lookup(path) == nil {
+		//            path = "message/property/default.tmpl"
+		//        }
+		//        if err := t.ExecuteTemplate(&buffer, path, data); err != nil {
+		//            panic(err)
+		//        }
+		//        return buffer.String()
+		//    },
+		//    "templateIfExists": func(path string, data any) string {
+		//        var buffer bytes.Buffer
+		//        if err := t.ExecuteTemplate(&buffer, path, data); err != nil {
+		//            panic(err)
+		//        }
+		//        return buffer.String()
+		//    },
+		//    "templateExists": func(path string) bool {
+		//        return t.Lookup(path) != nil
+		//    },
+	})
 	return recurparse.TextParseFS(
 		t,
 		templateDir,

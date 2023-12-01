@@ -13,17 +13,19 @@ class {{.ClassName}} extends Message
 {
     // @@protoc_insertion_point(message::trait_scope)
 {{range .Properties}}
+    {{- if not .IsOneOf -}}
     {{- if .Repeated}}
     /**
     * @var {{.CommentPropertyType}}
     */
     {{- end}}
     protected {{if and (.IsObject) (not .IsEnum)}}?{{end}}{{.PropertyType}} ${{.PropertyName}}{{if not .IsEnum}} = {{.PropertyDefault}}{{end}};
+    {{end -}}
 {{end}}
     public function __construct(?array $data = null) {
-        {{range .Enums -}}
-        $this->{{.PropertyName}} = {{.PropertyType}}::from(0);
-        {{end -}}
+        {{- range .Enums}}
+        {{if not .IsOneOf -}}$this->{{.PropertyName}} = {{.PropertyType}}::from(0);{{end}}
+        {{- end}}
         {{.Metadata.ClassName}}::initOnce();
         parent::__construct($data);
     }
@@ -36,14 +38,30 @@ class {{.ClassName}} extends Message
     public function get{{.AccessorName}}(): {{.PropertyType}}{{if .IsEnum}}|int{{end}} {
         {{- if .IsEnum}}
         if (debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2)[1]['class'] === "Google\\Protobuf\\Internal\\Message") {
-            return $this->{{.PropertyName}}->value;
+            return {{if .IsOneOf -}}
+                (int)$this->readOneof({{.Number}})
+            {{- else -}}
+                $this->{{.PropertyName}}->value;
+            {{- end}};
         }
         {{- end}}
-        return $this->{{.PropertyName}};
+        return {{if .IsOneOf -}}
+            {{- if .IsEnum -}}
+                {{.PropertyType}}::from((int)$this->readOneof({{.Number}}))
+            {{- else -}}
+                ({{.PropertyType}})$this->readOneof({{.Number}})
+            {{- end -}}
+        {{- else -}}
+            $this->{{.PropertyName}}
+        {{- end}};
     }
-    {{if and (.IsObject) (not .IsEnum)}}
+    {{if or (and .IsObject (not .IsEnum)) .IsOneOf}}
     public function has{{.AccessorName}}(): bool {
-        return isset($this->{{.PropertyName}});
+        {{if .IsOneOf -}}
+            return $this->hasOneof({{.Number}});
+        {{- else -}}
+            return isset($this->{{.PropertyName}});
+        {{- end}}
     }
     {{- end}}
     {{if .Repeated}}/**
@@ -61,9 +79,18 @@ class {{.ClassName}} extends Message
             $value = {{.PropertyType}}::from($value);
         }
         {{- end}}
-        $this->{{.PropertyName}} = $value;
+        {{if .IsOneOf -}}
+            $this->writeOneof({{.Number}}, {{if .IsEnum}}$value->value{{else}}$value{{end}})
+        {{- else -}}
+            $this->{{.PropertyName}} = $value
+        {{- end -}};
 
         return $this;
+    }
+{{end}}
+{{- range .OneOfProperties}}
+    public function get{{toCamel .}}(): string {
+        return $this->whichOneof('{{.}}');
     }
 {{end}}
     // @@protoc_insertion_point(message::class_scope)

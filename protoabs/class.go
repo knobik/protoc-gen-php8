@@ -26,17 +26,18 @@ func NewEnumValue(ev *descriptorpb.EnumValueDescriptorProto) *EnumValue {
 }
 
 type Class struct {
-	File          *ProtoFile
-	Parent        *Class
-	Name          string
-	BaseNamespace string
-	ClassPrefix   string
-	Type          ClassType
-	Properties    []*Property
-	EnumValues    []*EnumValue
-	Dependencies  []string
-	Metadata      *MetadataFile
-	Options       *descriptorpb.MessageOptions
+	File            *ProtoFile
+	Parent          *Class
+	Name            string
+	BaseNamespace   string
+	ClassPrefix     string
+	Type            ClassType
+	Properties      []*Property
+	EnumValues      []*EnumValue
+	OneOfProperties []string
+	Dependencies    []string
+	Metadata        *MetadataFile
+	Options         *descriptorpb.MessageOptions
 }
 
 func (c *Class) IsMapEntry() bool {
