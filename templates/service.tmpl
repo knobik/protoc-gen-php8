@@ -1,0 +1,19 @@
+<?php
+/**
+* Generated with protoc-gen-php8. DO NOT EDIT!
+*/
+namespace {{.Namespace}};
+
+{{range .Dependencies -}}
+use {{.}};
+{{end}}
+// @@protoc_insertion_point(service::use_scope)
+
+interface {{.ClassName}}
+{
+    // @@protoc_insertion_point(service::trait_scope)
+{{range .Methods}}
+    public function {{.MethodName}}({{.ResolveInputClass.ClassName}} $request): {{.ResolveOutputClass.ClassName}};
+{{end}}
+    // @@protoc_insertion_point(service::class_scope)
+}

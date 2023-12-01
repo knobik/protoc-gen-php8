@@ -14,6 +14,7 @@ var (
 	ClassTypeTemplateMap = map[ClassType]string{
 		CTypeMessage: "message.tmpl",
 		CTypeEnum:    "enum.tmpl",
+		CTypeService: "service.tmpl",
 	}
 
 	ObjectRefClassMap = map[string]*Class{}

@@ -2,6 +2,7 @@ package protoabs
 
 import (
 	"fmt"
+	"github.com/iancoleman/strcase"
 	"google.golang.org/protobuf/types/descriptorpb"
 	"strings"
 )
@@ -11,6 +12,7 @@ type ClassType int
 const (
 	CTypeMessage ClassType = iota
 	CTypeEnum    ClassType = iota
+	CTypeService ClassType = iota
 )
 
 type EnumValue struct {
@@ -25,6 +27,30 @@ func NewEnumValue(ev *descriptorpb.EnumValueDescriptorProto) *EnumValue {
 	}
 }
 
+type Method struct {
+	Name        string
+	InputClass  string
+	OutputClass string
+}
+
+func NewMethod(name string) *Method {
+	return &Method{
+		Name: name,
+	}
+}
+
+func (m *Method) MethodName() string {
+	return strcase.ToLowerCamel(m.Name)
+}
+
+func (m *Method) ResolveInputClass() *Class {
+	return ObjectRefClassMap[m.InputClass]
+}
+
+func (m *Method) ResolveOutputClass() *Class {
+	return ObjectRefClassMap[m.OutputClass]
+}
+
 type Class struct {
 	File            *ProtoFile
 	Parent          *Class
@@ -34,6 +60,7 @@ type Class struct {
 	Type            ClassType
 	Properties      []*Property
 	EnumValues      []*EnumValue
+	Methods         []*Method
 	OneOfProperties []string
 	Dependencies    []string
 	Metadata        *MetadataFile
@@ -153,7 +180,9 @@ func NewClass(st ClassType, file *ProtoFile, options *descriptorpb.FileOptions, 
 		ClassPrefix:   options.GetPhpClassPrefix(),
 		Options:       mo,
 	}
-	c.AddDependency(PHPIncludeMap[st])
+	if PHPIncludeMap[st] != "" {
+		c.AddDependency(PHPIncludeMap[st])
+	}
 
 	ObjectRefClassMap["."+c.Package()] = c
 

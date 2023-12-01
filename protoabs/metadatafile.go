@@ -67,7 +67,9 @@ func NewMetadataFile(desc *descriptorpb.FileDescriptorProto, pf *ProtoFile) *Met
 
 	for _, c := range pf.Classes {
 		c.Metadata = m
-		c.AddDependency(m.FQN())
+		if c.Type == CTypeMessage {
+			c.AddDependency(m.FQN())
+		}
 	}
 
 	return m

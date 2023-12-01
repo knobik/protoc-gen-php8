@@ -35,35 +35,62 @@ func parseProtoFile(desc *descriptorpb.FileDescriptorProto) *protoabs.ProtoFile 
 		f.Classes = append(f.Classes, parseEnum(f, desc.GetOptions(), enum, nil))
 	}
 
+	if desc.GetOptions().GetPhpGenericServices() {
+		for _, service := range desc.GetService() {
+			f.Classes = append(f.Classes, parseService(f, desc.GetOptions(), service))
+		}
+	}
+
 	return f
 }
 
-func parseEnum(f *protoabs.ProtoFile, options *descriptorpb.FileOptions, enum *descriptorpb.EnumDescriptorProto, parent *protoabs.Class) *protoabs.Class {
-	c := protoabs.NewClass(protoabs.CTypeEnum, f, options, enum.GetName(), nil, parent)
+func parseService(f *protoabs.ProtoFile, options *descriptorpb.FileOptions, desc *descriptorpb.ServiceDescriptorProto) *protoabs.Class {
+	c := protoabs.NewClass(protoabs.CTypeService, f, options, desc.GetName(), nil, nil)
 
-	for _, ev := range enum.GetValue() {
+	for _, method := range desc.GetMethod() {
+		c.Methods = append(c.Methods, parseServiceMethod(c, method))
+	}
+
+	return c
+}
+
+func parseServiceMethod(c *protoabs.Class, desc *descriptorpb.MethodDescriptorProto) *protoabs.Method {
+	m := protoabs.NewMethod(desc.GetName())
+	m.InputClass = desc.GetInputType()
+	c.AddDependency(m.ResolveInputClass().FQN())
+
+	m.OutputClass = desc.GetOutputType()
+	c.AddDependency(m.ResolveOutputClass().FQN())
+
+	return m
+}
+
+func parseEnum(f *protoabs.ProtoFile, options *descriptorpb.FileOptions, desc *descriptorpb.EnumDescriptorProto, parent *protoabs.Class) *protoabs.Class {
+	c := protoabs.NewClass(protoabs.CTypeEnum, f, options, desc.GetName(), nil, parent)
+
+	for _, ev := range desc.GetValue() {
 		c.EnumValues = append(c.EnumValues, protoabs.NewEnumValue(ev))
 	}
 
 	return c
 }
 
-func parseMessage(f *protoabs.ProtoFile, options *descriptorpb.FileOptions, message *descriptorpb.DescriptorProto, parent *protoabs.Class) *protoabs.Class {
-	c := protoabs.NewClass(protoabs.CTypeMessage, f, options, message.GetName(), message.GetOptions(), parent)
+func parseMessage(f *protoabs.ProtoFile, options *descriptorpb.FileOptions, desc *descriptorpb.DescriptorProto, parent *protoabs.Class) *protoabs.Class {
+	c := protoabs.NewClass(protoabs.CTypeMessage, f, options, desc.GetName(), desc.GetOptions(), parent)
 
-	for _, field := range message.GetField() {
+	for _, field := range desc.GetField() {
 		c.Properties = append(c.Properties, parseField(field))
 	}
 
-	for _, oneof := range message.GetOneofDecl() {
+	for _, oneof := range desc.GetOneofDecl() {
 		c.OneOfProperties = append(c.OneOfProperties, parseOneOfField(oneof))
 	}
 
-	for _, nested := range message.GetNestedType() {
+	for _, nested := range desc.GetNestedType() {
 		f.Classes = append(f.Classes, parseMessage(f, options, nested, c))
 	}
 
-	for _, enum := range message.GetEnumType() {
+	for _, enum := range desc.GetEnumType() {
 		f.Classes = append(f.Classes, parseEnum(f, options, enum, c))
 	}
 
@@ -97,10 +124,8 @@ func generateClassesFiles(t *template.Template, f *protoabs.ProtoFile) []*plugin
 		}
 
 		file := &pluginpb.CodeGeneratorResponse_File{
-			Name:              proto.String(c.PHPClassFilename()),
-			InsertionPoint:    nil,
-			Content:           proto.String(buffer.String()),
-			GeneratedCodeInfo: nil,
+			Name:    proto.String(c.PHPClassFilename()),
+			Content: proto.String(buffer.String()),
 		}
 		files = append(files, file)
 	}
