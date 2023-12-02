@@ -30,3 +30,9 @@ jobs:
         GOOS=linux GOARCH=arm64 go build -o build/arm64/linux/protoc-gen-php8
         GOOS=darwin GOARCH=amd64 go build -o build/amd64/macos/protoc-gen-php8
         GOOS=darwin GOARCH=arm64 go build -o build/arm64/macos/protoc-gen-php8
+
+    - name: Upload Binaries
+      uses: actions/upload-artifact@v3
+      with:
+        name: Binaries
+        path: build
