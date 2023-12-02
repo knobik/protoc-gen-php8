@@ -22,4 +22,11 @@ jobs:
         go-version: '1.21'
 
     - name: Build
-      run: go build -v ./...
+      run: |
+        go get -d -v
+        GOOS=windows GOARCH=amd64 go build -o windows/amd64/protoc-gen-php8.exe
+        GOOS=windows GOARCH=arm go build -o windows/arm/protoc-gen-php8.exe
+        GOOS=linux GOARCH=amd64 go build -o linux/amd64/protoc-gen-php8
+        GOOS=linux GOARCH=arm go build -o linux/arm/protoc-gen-php8
+        GOOS=darwin GOARCH=amd64 go build -o macos/amd64/protoc-gen-php8
+        GOOS=darwin GOARCH=arm go build -o macos/arm/protoc-gen-php8
