@@ -8,4 +8,4 @@ go build
 rm -rf gen_php_old
 mkdir -p gen_php_old
 
-protoc --php_out=./gen_php_old protobuf/test.proto
+protoc --php_out=./gen_php_old protobuf/tests/test.proto

@@ -6,14 +6,24 @@ import (
 )
 
 type Property struct {
-	Number     int
-	Name       string
-	Type       string
-	ProtoType  string
-	Repeated   bool
-	ObjectRef  string
-	IsOneOf    bool
-	IsOptional bool
+	File         *ProtoFile
+	Number       int
+	Name         string
+	Type         string
+	ProtoType    string
+	Repeated     bool
+	ObjectRef    string
+	IsOneOf      bool
+	IsOptional   bool
+	IsDeprecated bool
+}
+
+func (p *Property) IsWrapped() bool {
+	if dep := p.Dependency(); dep != nil {
+		return dep.File.Name == "google/protobuf/wrappers.proto"
+	}
+
+	return false
 }
 
 func (p *Property) IsMap() bool {
@@ -30,6 +40,10 @@ func (p *Property) IsEnum() bool {
 	}
 
 	return false
+}
+
+func (p *Property) IsRepeated() bool {
+	return p.Repeated
 }
 
 func (p *Property) Dependency() *Class {
@@ -49,7 +63,7 @@ func (p *Property) PropertyType() string {
 		return "array|MapField"
 	}
 
-	if p.Repeated {
+	if p.IsRepeated() {
 		return "array|RepeatedField"
 	}
 
@@ -61,11 +75,12 @@ func (p *Property) PropertyDefault() string {
 }
 
 func (p *Property) CommentPropertyType() string {
+	t := p.Type + "[]"
 	if p.IsMap() {
-		return p.PropertyType()
+		t = "array<" + p.Dependency().FindProperty("key").Type + ", " + p.Dependency().FindProperty("value").Type + ">"
 	}
 
-	return strings.ReplaceAll(p.PropertyType(), "array", p.Type+"[]")
+	return strings.ReplaceAll(p.PropertyType(), "array", t)
 }
 
 func (p *Property) AccessorName() string {

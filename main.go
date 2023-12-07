@@ -28,7 +28,9 @@ func parseProtoFile(desc *descriptorpb.FileDescriptorProto) *protoabs.ProtoFile 
 	f := protoabs.NewProtoFile(desc.GetName(), desc.GetPackage())
 
 	for _, message := range desc.GetMessageType() {
+		//if message.GetOptions().GetMapEntry() == false {
 		f.Classes = append(f.Classes, parseMessage(f, desc.GetOptions(), message, nil))
+		//}
 	}
 
 	for _, enum := range desc.GetEnumType() {
@@ -79,7 +81,7 @@ func parseMessage(f *protoabs.ProtoFile, options *descriptorpb.FileOptions, desc
 	c := protoabs.NewClass(protoabs.CTypeMessage, f, options, desc.GetName(), desc.GetOptions(), parent)
 
 	for _, field := range desc.GetField() {
-		c.Properties = append(c.Properties, parseField(field))
+		c.Properties = append(c.Properties, parseField(f, field))
 	}
 
 	for _, oneof := range desc.GetOneofDecl() {
@@ -101,22 +103,28 @@ func parseOneOfField(desc *descriptorpb.OneofDescriptorProto) string {
 	return desc.GetName()
 }
 
-func parseField(field *descriptorpb.FieldDescriptorProto) *protoabs.Property {
+func parseField(f *protoabs.ProtoFile, field *descriptorpb.FieldDescriptorProto) *protoabs.Property {
 	return &protoabs.Property{
-		Name:       field.GetName(),
-		Type:       phpProtoType(field.GetType()),
-		ProtoType:  stringProtoType(field.GetType()),
-		ObjectRef:  field.GetTypeName(),
-		Repeated:   field.GetLabel() == descriptorpb.FieldDescriptorProto_LABEL_REPEATED,
-		Number:     int(field.GetNumber()),
-		IsOneOf:    field.OneofIndex != nil, // only this returns nil
-		IsOptional: field.GetProto3Optional(),
+		File:         f,
+		Name:         field.GetName(),
+		Type:         phpProtoType(field.GetType()),
+		ProtoType:    stringProtoType(field.GetType()),
+		ObjectRef:    field.GetTypeName(),
+		Repeated:     field.GetLabel() == descriptorpb.FieldDescriptorProto_LABEL_REPEATED,
+		Number:       int(field.GetNumber()),
+		IsOneOf:      field.OneofIndex != nil, // only this returns nil
+		IsOptional:   field.GetProto3Optional(),
+		IsDeprecated: field.GetOptions().GetDeprecated(),
 	}
 }
 
 func generateClassesFiles(t *template.Template, f *protoabs.ProtoFile) []*pluginpb.CodeGeneratorResponse_File {
 	var files []*pluginpb.CodeGeneratorResponse_File
 	for _, c := range f.Classes {
+		if c.IsMapEntry() {
+			continue
+		}
+
 		var buffer bytes.Buffer
 
 		if err := t.ExecuteTemplate(&buffer, protoabs.ClassTypeTemplateMap[c.Type], c); err != nil {
@@ -273,6 +281,9 @@ func getTemplates() (*template.Template, error) {
 	t.Funcs(template.FuncMap{
 		"toCamel": func(input string) string {
 			return strcase.ToCamel(input)
+		},
+		"toLowerCamel": func(input string) string {
+			return strcase.ToLowerCamel(input)
 		},
 		//    "templateOrDefault": func(path string, data any) string {
 		//        var buffer bytes.Buffer

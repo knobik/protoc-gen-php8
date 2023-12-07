@@ -1,8 +1,10 @@
 package protoabs
 
 import (
+	"github.com/sanity-io/litter"
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
+	"log"
 	"strings"
 )
 
@@ -39,6 +41,10 @@ func phpDefault(p *Property) string {
 		t = "int"
 	}
 
+	if p.IsMap() {
+		t = "array"
+	}
+
 	switch t {
 	case "string":
 		return "''"
@@ -48,7 +54,13 @@ func phpDefault(p *Property) string {
 		return "0.0"
 	case "bool":
 		return "false"
+	case "array":
+		return "[]"
 	default:
 		return "null"
 	}
+}
+
+func dump(value ...interface{}) {
+	log.Println(litter.Sdump(value...))
 }

@@ -14,12 +14,12 @@ class {{.ClassName}} extends Message
     // @@protoc_insertion_point(message::trait_scope)
 {{range .Properties}}
     {{- if not .IsOneOf -}}
-    {{- if .Repeated}}
+    {{- if .IsRepeated}}
     /**
     * @var {{.CommentPropertyType}}
     */
     {{- end}}
-    protected {{if and (.IsObject) (not .IsEnum)}}?{{end}}{{.PropertyType}} ${{.PropertyName}}{{if not .IsEnum}} = {{.PropertyDefault}}{{end}};
+    protected {{if and (.IsObject) (not .IsEnum) (not .IsMap)}}?{{end}}{{.PropertyType}} ${{.PropertyName}}{{if not .IsEnum}} = {{.PropertyDefault}}{{end}};
     {{end -}}
 {{end}}
     public function __construct(?array $data = null) {
@@ -30,11 +30,34 @@ class {{.ClassName}} extends Message
         parent::__construct($data);
     }
 {{range .Properties}}
-    {{- if .Repeated}}
+    {{if and (not .IsMap) (not .IsRepeated) .IsWrapped}}
     /**
+    {{- if .IsDeprecated}}
+    * @deprecated
+    {{- end}}
+    * @return {{(.Dependency.FindProperty "value").PropertyType}}|null
+    */
+    public function get{{.AccessorName}}Unwrapped(): ?{{(.Dependency.FindProperty "value").PropertyType}} {
+        return $this->readWrapperValue("{{.Name}}");
+    }
+
+    /**
+    {{- if .IsDeprecated}}
+    * @deprecated
+    {{- end}}
+    * @return {{$.ClassName}}
+    */
+    public function set{{.AccessorName}}Unwrapped(?{{(.Dependency.FindProperty "value").PropertyType}} $value): {{$.ClassName}} {
+        $this->writeWrapperValue("{{.Name}}", $value);
+        return $this;
+    }
+    {{end}}
+    /**
+    {{- if .IsDeprecated}}
+    * @deprecated
+    {{- end}}
     * @return {{.CommentPropertyType}}
     */
-    {{- end}}
     public function get{{.AccessorName}}(): {{.PropertyType}}{{if .IsEnum}}|int{{end}} {
         {{- if .IsEnum}}
         if (debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2)[1]['class'] === "Google\\Protobuf\\Internal\\Message") {
@@ -56,6 +79,12 @@ class {{.ClassName}} extends Message
         {{- end}};
     }
     {{if or (and .IsObject (not .IsEnum)) .IsOneOf}}
+    /**
+    {{- if .IsDeprecated}}
+    * @deprecated
+    {{- end}}
+    * @return bool
+    */
     public function has{{.AccessorName}}(): bool {
         {{if .IsOneOf -}}
             return $this->hasOneof({{.Number}});
@@ -64,13 +93,19 @@ class {{.ClassName}} extends Message
         {{- end}}
     }
     {{- end}}
-    {{if .Repeated}}/**
-    * @param {{if not .IsMap}}{{.CommentPropertyType}}{{else}}array<{{(.Dependency.FindProperty "key").Type}}, {{(.Dependency.FindProperty "value").Type}}>{{end}} $value
-    * @throws \Exception
-    */
+
+    /**
+    {{- if .IsDeprecated}}
+    * @deprecated
     {{- end}}
+    {{if .IsRepeated -}}
+    * @param {{.CommentPropertyType}} $value
+    * @throws \Exception
+    {{- end}}
+    * @return {{$.ClassName}}
+    */
     public function set{{.AccessorName}}({{.PropertyType}}{{if .IsEnum}}|int{{end}} $value): {{$.ClassName}} {
-        {{- if and (.Repeated) (not .IsMap)}}
+        {{- if and (.IsRepeated) (not .IsMap)}}
         $value = GPBUtil::checkRepeatedField($value, GPBType::MESSAGE, {{.Type}}::class);
         {{- else if .IsMap}}
         $value = GPBUtil::checkMapField($value, GPBType::{{(.Dependency.FindProperty "key").ProtoType}}, GPBType::{{(.Dependency.FindProperty "value").ProtoType}}{{if (eq (.Dependency.FindProperty "value").ProtoType "MESSAGE")}}, {{.Type}}::class{{end}});
