@@ -1,7 +1,7 @@
 .idea
 gen
-gen_php_old
-gen_php_8
+gen_php
+gen_php8
 gen_go
 protoc-gen-php8
 protoc-gen-php8.exe

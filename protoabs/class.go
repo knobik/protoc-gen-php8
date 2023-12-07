@@ -174,7 +174,7 @@ func (c *Class) Package() string {
 
 func NewClass(st ClassType, file *ProtoFile, options *descriptorpb.FileOptions, name string, isMapEntry bool, isDeprecated bool, parent *Class) *Class {
 	ns := options.GetPhpNamespace()
-	if ns == "" {
+	if ns == "" || ns == "\\" {
 		ns = PackageToNamespace(file.Package)
 	}
 

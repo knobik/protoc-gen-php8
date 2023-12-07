@@ -2,11 +2,11 @@
 /**
 * Generated with protoc-gen-php8. DO NOT EDIT!
 */
-namespace {{.Namespace}};
+{{if ne .Namespace ""}}namespace {{.Namespace}};{{end}}
 
 {{range .Dependencies -}}
 use {{.}};
-{{end}}
+{{end -}}
 // @@protoc_insertion_point(message::use_scope)
 
 {{if .IsDeprecated -}}

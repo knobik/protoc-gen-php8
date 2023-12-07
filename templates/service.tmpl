@@ -6,7 +6,7 @@ namespace {{.Namespace}};
 
 {{range .Dependencies -}}
 use {{.}};
-{{end}}
+{{end -}}
 // @@protoc_insertion_point(service::use_scope)
 
 {{if .IsDeprecated -}}
