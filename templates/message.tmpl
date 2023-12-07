@@ -98,7 +98,7 @@ class {{.ClassName}} extends Message
     {{- if .IsDeprecated}}
     * @deprecated
     {{- end}}
-    {{if .IsRepeated -}}
+    {{- if .IsRepeated}}
     * @param {{.CommentPropertyType}} $value
     * @throws \Exception
     {{- end}}
