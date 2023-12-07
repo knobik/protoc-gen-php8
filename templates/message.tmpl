@@ -9,6 +9,11 @@ use {{.}};
 {{end}}
 // @@protoc_insertion_point(message::use_scope)
 
+{{if .IsDeprecated -}}
+/**
+* @deprecated
+*/
+{{- end}}
 class {{.ClassName}} extends Message
 {
     // @@protoc_insertion_point(message::trait_scope)

@@ -17,7 +17,8 @@ protoc --plugin=protoc-gen-php8 --php8_out=./gen your-proto-file.proto
 - [x] ~~metadata~~
 - [x] ~~service interface support~~
 - [x] ~~wrapped fields~~
-- [x] ~~deprecation comment~~
+- [x] ~~deprecation comments~~
 - [ ] well known types
 - [ ] copy comments from proto files to generated classes
 - [ ] prefix reserved keywords
+- [ ] extensions

@@ -9,6 +9,11 @@ use {{.}};
 {{end}}
 // @@protoc_insertion_point(service::use_scope)
 
+{{if .IsDeprecated -}}
+/**
+* @deprecated
+*/
+{{- end}}
 interface {{.ClassName}}
 {
     // @@protoc_insertion_point(service::trait_scope)

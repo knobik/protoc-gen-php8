@@ -7,10 +7,16 @@ namespace {{.Namespace}};
 use UnexpectedValueException;
 // @@protoc_insertion_point(enum::use_scope)
 
+{{if .IsDeprecated -}}
+/**
+* @deprecated
+*/
+{{- end}}
 enum {{.ClassName}}: int
 {
     // @@protoc_insertion_point(enum::trait_scope)
-{{range .EnumValues}}
+{{- range .EnumValues}}
+    {{if .IsDeprecated}}/** @deprecated */{{end}}
     case {{.Name}} = {{.Number}};
 {{- end}}
 

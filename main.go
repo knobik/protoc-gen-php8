@@ -28,9 +28,7 @@ func parseProtoFile(desc *descriptorpb.FileDescriptorProto) *protoabs.ProtoFile 
 	f := protoabs.NewProtoFile(desc.GetName(), desc.GetPackage())
 
 	for _, message := range desc.GetMessageType() {
-		//if message.GetOptions().GetMapEntry() == false {
 		f.Classes = append(f.Classes, parseMessage(f, desc.GetOptions(), message, nil))
-		//}
 	}
 
 	for _, enum := range desc.GetEnumType() {
@@ -46,8 +44,8 @@ func parseProtoFile(desc *descriptorpb.FileDescriptorProto) *protoabs.ProtoFile 
 	return f
 }
 
-func parseService(f *protoabs.ProtoFile, options *descriptorpb.FileOptions, desc *descriptorpb.ServiceDescriptorProto) *protoabs.Class {
-	c := protoabs.NewClass(protoabs.CTypeService, f, options, desc.GetName(), nil, nil)
+func parseService(file *protoabs.ProtoFile, fileOptions *descriptorpb.FileOptions, desc *descriptorpb.ServiceDescriptorProto) *protoabs.Class {
+	c := protoabs.NewClass(protoabs.CTypeService, file, fileOptions, desc.GetName(), false, desc.GetOptions().GetDeprecated(), nil)
 
 	for _, method := range desc.GetMethod() {
 		c.Methods = append(c.Methods, parseServiceMethod(c, method))
@@ -67,8 +65,8 @@ func parseServiceMethod(c *protoabs.Class, desc *descriptorpb.MethodDescriptorPr
 	return m
 }
 
-func parseEnum(f *protoabs.ProtoFile, options *descriptorpb.FileOptions, desc *descriptorpb.EnumDescriptorProto, parent *protoabs.Class) *protoabs.Class {
-	c := protoabs.NewClass(protoabs.CTypeEnum, f, options, desc.GetName(), nil, parent)
+func parseEnum(file *protoabs.ProtoFile, fileOptions *descriptorpb.FileOptions, desc *descriptorpb.EnumDescriptorProto, parent *protoabs.Class) *protoabs.Class {
+	c := protoabs.NewClass(protoabs.CTypeEnum, file, fileOptions, desc.GetName(), false, desc.GetOptions().GetDeprecated(), parent)
 
 	for _, ev := range desc.GetValue() {
 		c.EnumValues = append(c.EnumValues, protoabs.NewEnumValue(ev))
@@ -77,11 +75,11 @@ func parseEnum(f *protoabs.ProtoFile, options *descriptorpb.FileOptions, desc *d
 	return c
 }
 
-func parseMessage(f *protoabs.ProtoFile, options *descriptorpb.FileOptions, desc *descriptorpb.DescriptorProto, parent *protoabs.Class) *protoabs.Class {
-	c := protoabs.NewClass(protoabs.CTypeMessage, f, options, desc.GetName(), desc.GetOptions(), parent)
+func parseMessage(file *protoabs.ProtoFile, fileOptions *descriptorpb.FileOptions, desc *descriptorpb.DescriptorProto, parent *protoabs.Class) *protoabs.Class {
+	c := protoabs.NewClass(protoabs.CTypeMessage, file, fileOptions, desc.GetName(), desc.GetOptions().GetMapEntry(), desc.GetOptions().GetDeprecated(), parent)
 
 	for _, field := range desc.GetField() {
-		c.Properties = append(c.Properties, parseField(f, field))
+		c.Properties = append(c.Properties, parseField(file, field))
 	}
 
 	for _, oneof := range desc.GetOneofDecl() {
@@ -89,11 +87,11 @@ func parseMessage(f *protoabs.ProtoFile, options *descriptorpb.FileOptions, desc
 	}
 
 	for _, nested := range desc.GetNestedType() {
-		f.Classes = append(f.Classes, parseMessage(f, options, nested, c))
+		file.Classes = append(file.Classes, parseMessage(file, fileOptions, nested, c))
 	}
 
 	for _, enum := range desc.GetEnumType() {
-		f.Classes = append(f.Classes, parseEnum(f, options, enum, c))
+		file.Classes = append(file.Classes, parseEnum(file, fileOptions, enum, c))
 	}
 
 	return c
@@ -233,7 +231,7 @@ func main() {
 	var metadataFiles []*protoabs.MetadataFile
 
 	for _, protoFile := range request.GetProtoFile() {
-		if protoFile.GetSyntax() != "proto3" {
+		if strings.Contains(protoFile.GetName(), "google/protobuf") == false && protoFile.GetSyntax() != "proto3" {
 			panic(errors.New("only proto3 syntax is supported"))
 		}
 

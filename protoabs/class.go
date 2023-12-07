@@ -16,14 +16,20 @@ const (
 )
 
 type EnumValue struct {
-	Name   string
-	Number int
+	Name       string
+	Number     int
+	Deprecated bool
+}
+
+func (e *EnumValue) IsDeprecated() bool {
+	return e.Deprecated
 }
 
 func NewEnumValue(ev *descriptorpb.EnumValueDescriptorProto) *EnumValue {
 	return &EnumValue{
-		Name:   ev.GetName(),
-		Number: int(ev.GetNumber()),
+		Name:       ev.GetName(),
+		Number:     int(ev.GetNumber()),
+		Deprecated: ev.GetOptions().GetDeprecated(),
 	}
 }
 
@@ -64,15 +70,16 @@ type Class struct {
 	OneOfProperties []string
 	Dependencies    []string
 	Metadata        *MetadataFile
-	Options         *descriptorpb.MessageOptions
+	MapEntry        bool
+	Deprecated      bool
+}
+
+func (c *Class) IsDeprecated() bool {
+	return c.Deprecated
 }
 
 func (c *Class) IsMapEntry() bool {
-	if c.Options != nil {
-		return c.Options.GetMapEntry()
-	}
-
-	return false
+	return c.MapEntry
 }
 
 func (c *Class) IsEnum() bool {
@@ -165,7 +172,7 @@ func (c *Class) Package() string {
 	return fmt.Sprintf("%s.%s", c.File.Package, c.Name)
 }
 
-func NewClass(st ClassType, file *ProtoFile, options *descriptorpb.FileOptions, name string, mo *descriptorpb.MessageOptions, parent *Class) *Class {
+func NewClass(st ClassType, file *ProtoFile, options *descriptorpb.FileOptions, name string, isMapEntry bool, isDeprecated bool, parent *Class) *Class {
 	ns := options.GetPhpNamespace()
 	if ns == "" {
 		ns = PackageToNamespace(file.Package)
@@ -178,7 +185,8 @@ func NewClass(st ClassType, file *ProtoFile, options *descriptorpb.FileOptions, 
 		Type:          st,
 		BaseNamespace: ns,
 		ClassPrefix:   options.GetPhpClassPrefix(),
-		Options:       mo,
+		MapEntry:      isMapEntry,
+		Deprecated:    isDeprecated,
 	}
 	if PHPIncludeMap[st] != "" {
 		c.AddDependency(PHPIncludeMap[st])
