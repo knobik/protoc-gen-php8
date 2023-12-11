@@ -115,7 +115,9 @@ func (c *Class) AddDependency(dependency string) string {
 		}
 	}
 
-	c.Dependencies = append(c.Dependencies, alias)
+	if dependency != c.FQN() {
+		c.Dependencies = append(c.Dependencies, alias)
+	}
 
 	return base
 }

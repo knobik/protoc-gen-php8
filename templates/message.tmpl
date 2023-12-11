@@ -73,7 +73,7 @@ class {{.ClassName}} extends {{FQNBasename $.File.Opt.MessageParentClass}}
     */
     public function get{{.AccessorName}}(): {{.PropertyType}}{{if .IsPureEnum}}|int{{end}} {
         {{- if .IsPureEnum}}
-        if (debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2)[1]['class'] === "Google\\Protobuf\\Internal\\Message") {
+        if ({{$.Metadata.ClassName}}::isCalledByProtobuf()) {
             return {{if .IsOneOf -}}
                 (int)$this->readOneof({{.Number}});
             {{- else -}}

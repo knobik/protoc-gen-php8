@@ -25,5 +25,16 @@ class {{.ClassName}}
         static::$isInitialized = true;
     }
 
+    public static function isCalledByProtobuf(): bool
+    {
+        foreach (debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS) as $trace) {
+            if ($trace['class'] === 'Google\\Protobuf\\Internal\\Message') {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     // @@protoc_insertion_point(metadata::class_scope)
 }
