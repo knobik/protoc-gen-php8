@@ -34,6 +34,14 @@ func (p *Property) IsMap() bool {
 	return false
 }
 
+func (p *Property) IsPureEnum() bool {
+	if dep := p.Dependency(); dep != nil {
+		return dep.IsEnum() && p.IsRepeated() == false
+	}
+
+	return false
+}
+
 func (p *Property) IsEnum() bool {
 	if dep := p.Dependency(); dep != nil {
 		return dep.IsEnum()

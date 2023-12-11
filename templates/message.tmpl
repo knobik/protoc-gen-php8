@@ -24,7 +24,7 @@ class {{.ClassName}} extends {{FQNBasename $.File.Opt.MessageParentClass}}
     * @var {{.CommentPropertyType}}
     */
     {{- end}}
-    protected {{if and (.IsObject) (not .IsEnum) (not .IsMap) (not .IsRepeated)}}?{{end}}{{.PropertyType}} ${{.PropertyName}}{{if not .IsEnum}} = {{.PropertyDefault}}{{end}};
+    protected {{if and (.IsObject) (not .IsEnum) (not .IsMap) (not .IsRepeated)}}?{{end}}{{.PropertyType}} ${{.PropertyName}}{{if not .IsPureEnum}} = {{.PropertyDefault}}{{end}};
     {{end -}}
 {{end}}
     /**
@@ -71,14 +71,14 @@ class {{.ClassName}} extends {{FQNBasename $.File.Opt.MessageParentClass}}
     {{- end}}
     * @return {{.CommentPropertyType}}
     */
-    public function get{{.AccessorName}}(): {{.PropertyType}}{{if and .IsEnum (not .IsRepeated)}}|int{{end}} {
-        {{- if and .IsEnum (not .IsRepeated)}}
+    public function get{{.AccessorName}}(): {{.PropertyType}}{{if .IsPureEnum}}|int{{end}} {
+        {{- if .IsPureEnum}}
         if (debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2)[1]['class'] === "Google\\Protobuf\\Internal\\Message") {
             return {{if .IsOneOf -}}
-                (int)$this->readOneof({{.Number}})
+                (int)$this->readOneof({{.Number}});
             {{- else -}}
                 $this->{{.PropertyName}}->value;
-            {{- end}};
+            {{- end}}
         }
         {{- end}}
         return {{if .IsOneOf -}}
@@ -114,15 +114,15 @@ class {{.ClassName}} extends {{FQNBasename $.File.Opt.MessageParentClass}}
     {{- if .IsRepeated}}
     * @throws \Exception
     {{- end}}
-    * @param {{.CommentPropertyType}}{{if and .IsEnum (not .IsRepeated)}}|int{{end}} $value
+    * @param {{.CommentPropertyType}}{{if .IsPureEnum}}|int{{end}} $value
     * @return {{$.ClassName}}
     */
-    public function set{{.AccessorName}}({{.PropertyType}}{{if and .IsEnum (not .IsRepeated)}}|int{{end}} $value): {{$.ClassName}} {
+    public function set{{.AccessorName}}({{.PropertyType}}{{if .IsPureEnum}}|int{{end}} $value): {{$.ClassName}} {
         {{- if and (.IsRepeated) (not .IsMap)}}
         $value = GPBUtil::checkRepeatedField($value, GPBType::{{.ProtoType}}, {{.Type}}::class);
         {{- else if .IsMap}}
         $value = GPBUtil::checkMapField($value, GPBType::{{(.Dependency.FindProperty "key").ProtoType}}, GPBType::{{(.Dependency.FindProperty "value").ProtoType}}{{if (eq (.Dependency.FindProperty "value").ProtoType "MESSAGE")}}, {{.Type}}::class{{end}});
-        {{- else if and .IsEnum (not .IsRepeated)}}
+        {{- else if .IsPureEnum}}
         if (is_int($value)) {
             $value = {{.PropertyType}}::from($value);
         }
