@@ -9,10 +9,6 @@ import (
 )
 
 var (
-	PHPIncludeMap = map[ClassType]string{
-		CTypeMessage: "Google\\Protobuf\\Internal\\Message",
-	}
-
 	ClassTypeTemplateMap = map[ClassType]string{
 		CTypeMessage: "message.tmpl",
 		CTypeEnum:    "enum.tmpl",

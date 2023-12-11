@@ -11,10 +11,10 @@ use {{.}};
 
 {{if .IsDeprecated -}}
 /**
-* @deprecated
+* @deprecated Marked as deprecated in {{$.File.Name}}.
 */
 {{- end}}
-class {{.ClassName}} extends Message
+class {{.ClassName}} extends {{FQNBasename $.File.Opt.MessageParentClass}}
 {
     // @@protoc_insertion_point(message::trait_scope)
 {{range .Properties}}
@@ -38,7 +38,7 @@ class {{.ClassName}} extends Message
     {{if and (not .IsMap) (not .IsRepeated) .IsWrapped}}
     /**
     {{- if .IsDeprecated}}
-    * @deprecated
+    * @deprecated Marked as deprecated in {{$.File.Name}}.
     {{- end}}
     * @return {{(.Dependency.FindProperty "value").PropertyType}}|null
     */
@@ -48,7 +48,7 @@ class {{.ClassName}} extends Message
 
     /**
     {{- if .IsDeprecated}}
-    * @deprecated
+    * @deprecated Marked as deprecated in {{$.File.Name}}.
     {{- end}}
     * @return {{$.ClassName}}
     */
@@ -59,7 +59,7 @@ class {{.ClassName}} extends Message
     {{end}}
     /**
     {{- if .IsDeprecated}}
-    * @deprecated
+    * @deprecated Marked as deprecated in {{$.File.Name}}.
     {{- end}}
     * @return {{.CommentPropertyType}}
     */
@@ -86,7 +86,7 @@ class {{.ClassName}} extends Message
     {{if or (and .IsObject (not .IsEnum)) .IsOneOf}}
     /**
     {{- if .IsDeprecated}}
-    * @deprecated
+    * @deprecated Marked as deprecated in {{$.File.Name}}.
     {{- end}}
     * @return bool
     */
@@ -101,7 +101,7 @@ class {{.ClassName}} extends Message
 
     /**
     {{- if .IsDeprecated}}
-    * @deprecated
+    * @deprecated Marked as deprecated in {{$.File.Name}}.
     {{- end}}
     {{- if .IsRepeated}}
     * @param {{.CommentPropertyType}} $value

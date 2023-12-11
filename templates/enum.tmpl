@@ -9,14 +9,14 @@ use UnexpectedValueException;
 
 {{if .IsDeprecated -}}
 /**
-* @deprecated
+* @deprecated Marked as deprecated in {{$.File.Name}}.
 */
 {{- end}}
 enum {{.ClassName}}: int
 {
     // @@protoc_insertion_point(enum::trait_scope)
 {{- range .EnumValues}}
-    {{if .IsDeprecated}}/** @deprecated */{{end}}
+    {{if .IsDeprecated}}/** @deprecated Marked as deprecated in {{$.File.Name}}. */{{end}}
     case {{.Name}} = {{.Number}};
 {{- end}}
 

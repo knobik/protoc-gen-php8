@@ -11,7 +11,7 @@ use {{.}};
 
 {{if .IsDeprecated -}}
 /**
-* @deprecated
+* @deprecated Marked as deprecated in {{$.File.Name}}.
 */
 {{- end}}
 interface {{.ClassName}}

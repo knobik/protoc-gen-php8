@@ -24,8 +24,8 @@ import (
 //go:embed templates/*
 var templateFiles embed.FS
 
-func parseProtoFile(desc *descriptorpb.FileDescriptorProto) *protoabs.ProtoFile {
-	f := protoabs.NewProtoFile(desc.GetName(), desc.GetPackage())
+func parseProtoFile(desc *descriptorpb.FileDescriptorProto, opt *protoabs.Options) *protoabs.ProtoFile {
+	f := protoabs.NewProtoFile(desc.GetName(), desc.GetPackage(), opt)
 
 	for _, message := range desc.GetMessageType() {
 		f.Classes = append(f.Classes, parseMessage(f, desc.GetOptions(), message, nil))
@@ -227,6 +227,11 @@ func main() {
 		panic(err)
 	}
 
+	opt, err := protoabs.ParseOptions(*request.Parameter)
+	if err != nil {
+		panic(err)
+	}
+
 	var files []*protoabs.ProtoFile
 	var metadataFiles []*protoabs.MetadataFile
 
@@ -235,7 +240,7 @@ func main() {
 			panic(errors.New("only proto3 syntax is supported"))
 		}
 
-		pf := parseProtoFile(protoFile)
+		pf := parseProtoFile(protoFile, opt)
 		files = append(files, pf)
 		metadataFiles = append(metadataFiles, protoabs.NewMetadataFile(protoFile, pf))
 	}
@@ -282,6 +287,9 @@ func getTemplates() (*template.Template, error) {
 		},
 		"toLowerCamel": func(input string) string {
 			return strcase.ToLowerCamel(input)
+		},
+		"FQNBasename": func(fqn string) string {
+			return protoabs.FQNBasename(fqn)
 		},
 		//    "templateOrDefault": func(path string, data any) string {
 		//        var buffer bytes.Buffer

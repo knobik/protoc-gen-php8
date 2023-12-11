@@ -188,8 +188,9 @@ func NewClass(st ClassType, file *ProtoFile, options *descriptorpb.FileOptions, 
 		MapEntry:      isMapEntry,
 		Deprecated:    isDeprecated,
 	}
-	if PHPIncludeMap[st] != "" {
-		c.AddDependency(PHPIncludeMap[st])
+
+	if st == CTypeMessage {
+		c.AddDependency(file.Opt.MessageParentClass)
 	}
 
 	ObjectRefClassMap["."+c.Package()] = c
