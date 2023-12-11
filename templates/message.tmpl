@@ -24,9 +24,16 @@ class {{.ClassName}} extends {{FQNBasename $.File.Opt.MessageParentClass}}
     * @var {{.CommentPropertyType}}
     */
     {{- end}}
-    protected {{if and (.IsObject) (not .IsEnum) (not .IsMap)}}?{{end}}{{.PropertyType}} ${{.PropertyName}}{{if not .IsEnum}} = {{.PropertyDefault}}{{end}};
+    protected {{if and (.IsObject) (not .IsEnum) (not .IsMap) (not .IsRepeated)}}?{{end}}{{.PropertyType}} ${{.PropertyName}}{{if not .IsEnum}} = {{.PropertyDefault}}{{end}};
     {{end -}}
 {{end}}
+    /**
+    * @param null|array{
+{{- range .Properties}}{{if not .IsOneOf}}
+    *     {{.PropertyName}}: {{.CommentPropertyType}},
+{{- end}}{{end}}
+    * } $data
+    */
     public function __construct(?array $data = null) {
         {{- range .Enums}}
         {{if not .IsOneOf -}}$this->{{.PropertyName}} = {{.PropertyType}}::from(0);{{end}}
@@ -50,6 +57,7 @@ class {{.ClassName}} extends {{FQNBasename $.File.Opt.MessageParentClass}}
     {{- if .IsDeprecated}}
     * @deprecated Marked as deprecated in {{$.File.Name}}.
     {{- end}}
+    * @param {{(.Dependency.FindProperty "value").PropertyType}}|null $value
     * @return {{$.ClassName}}
     */
     public function set{{.AccessorName}}Unwrapped(?{{(.Dependency.FindProperty "value").PropertyType}} $value): {{$.ClassName}} {
@@ -63,8 +71,8 @@ class {{.ClassName}} extends {{FQNBasename $.File.Opt.MessageParentClass}}
     {{- end}}
     * @return {{.CommentPropertyType}}
     */
-    public function get{{.AccessorName}}(): {{.PropertyType}}{{if .IsEnum}}|int{{end}} {
-        {{- if .IsEnum}}
+    public function get{{.AccessorName}}(): {{.PropertyType}}{{if and .IsEnum (not .IsRepeated)}}|int{{end}} {
+        {{- if and .IsEnum (not .IsRepeated)}}
         if (debug_backtrace(DEBUG_BACKTRACE_IGNORE_ARGS, 2)[1]['class'] === "Google\\Protobuf\\Internal\\Message") {
             return {{if .IsOneOf -}}
                 (int)$this->readOneof({{.Number}})
@@ -104,17 +112,17 @@ class {{.ClassName}} extends {{FQNBasename $.File.Opt.MessageParentClass}}
     * @deprecated Marked as deprecated in {{$.File.Name}}.
     {{- end}}
     {{- if .IsRepeated}}
-    * @param {{.CommentPropertyType}} $value
     * @throws \Exception
     {{- end}}
+    * @param {{.CommentPropertyType}}{{if and .IsEnum (not .IsRepeated)}}|int{{end}} $value
     * @return {{$.ClassName}}
     */
-    public function set{{.AccessorName}}({{.PropertyType}}{{if .IsEnum}}|int{{end}} $value): {{$.ClassName}} {
+    public function set{{.AccessorName}}({{.PropertyType}}{{if and .IsEnum (not .IsRepeated)}}|int{{end}} $value): {{$.ClassName}} {
         {{- if and (.IsRepeated) (not .IsMap)}}
-        $value = GPBUtil::checkRepeatedField($value, GPBType::MESSAGE, {{.Type}}::class);
+        $value = GPBUtil::checkRepeatedField($value, GPBType::{{.ProtoType}}, {{.Type}}::class);
         {{- else if .IsMap}}
         $value = GPBUtil::checkMapField($value, GPBType::{{(.Dependency.FindProperty "key").ProtoType}}, GPBType::{{(.Dependency.FindProperty "value").ProtoType}}{{if (eq (.Dependency.FindProperty "value").ProtoType "MESSAGE")}}, {{.Type}}::class{{end}});
-        {{- else if .IsEnum}}
+        {{- else if and .IsEnum (not .IsRepeated)}}
         if (is_int($value)) {
             $value = {{.PropertyType}}::from($value);
         }

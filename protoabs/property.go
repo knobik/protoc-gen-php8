@@ -75,12 +75,17 @@ func (p *Property) PropertyDefault() string {
 }
 
 func (p *Property) CommentPropertyType() string {
-	t := p.Type + "[]"
+	at := "array<" + p.Type + ">"
 	if p.IsMap() {
-		t = "array<" + p.Dependency().FindProperty("key").Type + ", " + p.Dependency().FindProperty("value").Type + ">"
+		at = "array<" + p.Dependency().FindProperty("key").Type + ", " + p.Dependency().FindProperty("value").Type + ">"
 	}
 
-	return strings.ReplaceAll(p.PropertyType(), "array", t)
+	rt := "RepeatedField<" + p.Type + ">"
+
+	result := strings.ReplaceAll(p.PropertyType(), "array", at)
+	result = strings.ReplaceAll(result, "RepeatedField", rt)
+
+	return result
 }
 
 func (p *Property) AccessorName() string {

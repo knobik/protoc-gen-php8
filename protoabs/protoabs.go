@@ -41,6 +41,10 @@ func phpDefault(p *Property) string {
 		t = "array"
 	}
 
+	if p.IsRepeated() {
+		t = "array"
+	}
+
 	switch t {
 	case "string":
 		return "''"
