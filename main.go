@@ -227,7 +227,7 @@ func main() {
 		panic(err)
 	}
 
-	opt, err := protoabs.ParseOptions(*request.Parameter)
+	opt, err := protoabs.ParseOptions(request.Parameter)
 	if err != nil {
 		panic(err)
 	}
