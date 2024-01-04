@@ -2,3 +2,4 @@ protoc-gen-php8
 composer.lock
 vendor
 gen
+!protobuf
