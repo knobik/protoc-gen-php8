@@ -7,13 +7,17 @@ import (
 	"strings"
 )
 
+var Opts *Options
+
 type Options struct {
 	MessageParentClass string
+	ReservedPrefix     string
 }
 
-func ParseOptions(parameter *string) (*Options, error) {
-	o := &Options{
+func ParseOptions(parameter *string) error {
+	Opts = &Options{
 		MessageParentClass: "Google\\Protobuf\\Internal\\Message",
+		ReservedPrefix:     "PB",
 	}
 
 	if parameter != nil {
@@ -23,20 +27,20 @@ func ParseOptions(parameter *string) (*Options, error) {
 			opt := parts[0]
 			val := parts[1]
 
-			ok, err := reflections.HasField(o, opt)
+			ok, err := reflections.HasField(Opts, opt)
 			if err != nil {
-				return nil, err
+				return err
 			}
 			if ok {
-				err = reflections.SetField(o, opt, val)
+				err = reflections.SetField(Opts, opt, val)
 				if err != nil {
-					return nil, err
+					return err
 				}
 			} else {
-				return nil, errors.New(fmt.Sprintf("option %s does not exist", opt))
+				return errors.New(fmt.Sprintf("option %s does not exist", opt))
 			}
 		}
 	}
 
-	return o, nil
+	return nil
 }

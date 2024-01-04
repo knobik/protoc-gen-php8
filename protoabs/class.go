@@ -196,7 +196,7 @@ func NewClass(st ClassType, file *ProtoFile, options *descriptorpb.FileOptions, 
 	}
 
 	if st == CTypeMessage {
-		c.AddDependency(file.Opt.MessageParentClass)
+		c.AddDependency(Opts.MessageParentClass)
 	}
 
 	ObjectRefClassMap["."+c.Package()] = c

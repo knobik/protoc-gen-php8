@@ -64,7 +64,7 @@ func phpDefault(p *Property) string {
 
 func PrefixReserved(value string, isConstant bool) string {
 	if IsReservedKeyword(value, isConstant) {
-		value = "PB" + value
+		value = Opts.ReservedPrefix + value
 	}
 
 	return value

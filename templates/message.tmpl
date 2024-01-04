@@ -14,7 +14,7 @@ use {{.}};
 * @deprecated Marked as deprecated in {{$.File.Name}}.
 */
 {{- end}}
-class {{.ClassName}} extends {{FQNBasename $.File.Opt.MessageParentClass}}
+class {{.ClassName}} extends {{FQNBasename Opts.MessageParentClass}}
 {
     // @@protoc_insertion_point(message::trait_scope)
 {{range .Properties}}

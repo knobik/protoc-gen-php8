@@ -23,8 +23,8 @@ import (
 //go:embed templates/*
 var templateFiles embed.FS
 
-func parseProtoFile(desc *descriptorpb.FileDescriptorProto, opt *protoabs.Options) *protoabs.ProtoFile {
-	f := protoabs.NewProtoFile(desc.GetName(), desc.GetPackage(), opt)
+func parseProtoFile(desc *descriptorpb.FileDescriptorProto) *protoabs.ProtoFile {
+	f := protoabs.NewProtoFile(desc.GetName(), desc.GetPackage())
 
 	for _, message := range desc.GetMessageType() {
 		f.Classes = append(f.Classes, parseMessage(f, desc.GetOptions(), message, nil))
@@ -226,7 +226,7 @@ func main() {
 		panic(err)
 	}
 
-	opt, err := protoabs.ParseOptions(request.Parameter)
+	err = protoabs.ParseOptions(request.Parameter)
 	if err != nil {
 		panic(err)
 	}
@@ -239,7 +239,7 @@ func main() {
 			panic(errors.New("only proto3 syntax is supported"))
 		}
 
-		pf := parseProtoFile(protoFile, opt)
+		pf := parseProtoFile(protoFile)
 		files = append(files, pf)
 		metadataFiles = append(metadataFiles, protoabs.NewMetadataFile(protoFile, pf))
 	}
@@ -280,6 +280,9 @@ func getTemplates() (*template.Template, error) {
 	templateDir, _ := fs.Sub(templateFiles, "templates")
 	t := template.New("templates")
 	t.Funcs(template.FuncMap{
+		"Opts": func() *protoabs.Options {
+			return protoabs.Opts
+		},
 		"toCamel": func(input string) string {
 			return strcase.ToCamel(input)
 		},

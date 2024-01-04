@@ -15,9 +15,10 @@ go build .
 protoc --plugin=protoc-gen-php8 --php8_out=./gen your-proto-file.proto
 ```
 
-### Options
+### Options and default values
 ```shell
---php8_opt=MessageParentClass="App\\Protobuf\\BaseMessage"
+--php8_opt=MessageParentClass="Google\\Protobuf\\Internal\\Message"
+--php8_opt=ReservedPrefix="PB"
 ```
 
 # TODO:
