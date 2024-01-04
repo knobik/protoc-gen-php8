@@ -25,6 +25,10 @@ func (e *EnumValue) IsDeprecated() bool {
 	return e.Deprecated
 }
 
+func (e *EnumValue) EnumName() string {
+	return PrefixReserved(e.Name, true)
+}
+
 func NewEnumValue(ev *descriptorpb.EnumValueDescriptorProto) *EnumValue {
 	return &EnumValue{
 		Name:       ev.GetName(),
@@ -140,7 +144,7 @@ func (c *Class) aliasDependency(dependency string) (string, string) {
 }
 
 func (c *Class) ClassName() string {
-	return c.ClassPrefix + c.Name
+	return PrefixReserved(c.ClassPrefix+c.Name, false)
 }
 
 func (c *Class) Namespace() string {

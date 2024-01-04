@@ -1,0 +1,12 @@
+{
+  "autoload": {
+    "psr-4": {
+      "": "gen/",
+      "Tests\\": "tests/"
+    }
+  },
+  "require": {
+    "phpunit/phpunit": "^10",
+    "symfony/var-dumper": "^7"
+  }
+}

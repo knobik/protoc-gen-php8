@@ -5,6 +5,7 @@ import (
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 	"log"
+	"slices"
 	"strings"
 )
 
@@ -59,6 +60,40 @@ func phpDefault(p *Property) string {
 	default:
 		return "null"
 	}
+}
+
+func PrefixReserved(value string, isConstant bool) string {
+	if IsReservedKeyword(value, isConstant) {
+		value = "PB" + value
+	}
+
+	return value
+}
+
+func IsReservedKeyword(value string, isConstant bool) bool {
+	kw := []string{
+		"abstract", "and", "array", "as", "break", "callable", "case", "catch", "class", "clone", "const", "continue",
+		"declare", "default", "die", "do", "echo", "else", "elseif", "empty", "enddeclare", "endfor", "endforeach",
+		"endif", "endswitch", "endwhile", "eval", "exit", "extends", "final", "finally", "fn", "for", "foreach",
+		"function", "global", "goto", "if", "implements", "include", "include_once", "instanceof", "insteadof",
+		"interface", "isset", "list", "match", "namespace", "new", "or", "parent", "print", "private", "protected",
+		"public", "readonly", "require", "require_once", "return", "self", "static", "switch", "throw", "trait",
+		"try", "unset", "use", "var", "while", "xor", "yield", "int", "float", "bool", "string", "true", "false",
+		"null", "void", "iterable",
+	}
+	vpn := []string{
+		"int", "float", "bool", "string", "true", "false", "null", "void", "iterable", "parent", "self", "readonly",
+	}
+
+	if slices.Contains(kw, strings.ToLower(value)) {
+		if isConstant && slices.Contains(vpn, strings.ToLower(value)) {
+			return false
+		}
+
+		return true
+	}
+
+	return false
 }
 
 func dump(value ...interface{}) {

@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"embed"
 	"errors"
-	"fmt"
 	"github.com/iancoleman/strcase"
 	recurparse "github.com/karelbilek/template-parse-recursive"
 	"github.com/sanity-io/litter"
@@ -272,8 +271,7 @@ func main() {
 		panic(err)
 	}
 
-	_, err = fmt.Fprintf(os.Stdout, string(out))
-	if err != nil {
+	if _, err = os.Stdout.Write(out); err != nil {
 		panic(err)
 	}
 }

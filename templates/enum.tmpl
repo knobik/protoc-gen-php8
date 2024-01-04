@@ -17,7 +17,7 @@ enum {{.ClassName}}: int
     // @@protoc_insertion_point(enum::trait_scope)
 {{- range .EnumValues}}
     {{if .IsDeprecated}}/** @deprecated Marked as deprecated in {{$.File.Name}}. */{{end}}
-    case {{.Name}} = {{.Number}};
+    case {{.EnumName}} = {{.Number}};
 {{- end}}
 
     public static function name(int $value): string {
