@@ -1,5 +1,5 @@
 <p align="center">
-    <img src=".img/logo.svg" alt="drawing" width="300px"/>
+    <img src=".img/logo.png" alt="drawing" width="300px"/>
 </p>
 
 # Build
