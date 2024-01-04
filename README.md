@@ -1,3 +1,4 @@
+<h1 style="text-align: center;">protoc-gen-php8</h1>
 <p align="center">
     <img src=".img/logo.png" alt="drawing" width="300px"/>
 </p>
