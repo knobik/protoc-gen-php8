@@ -1,0 +1,105 @@
+# This workflow will build a golang project
+# For more information see: https://docs.github.com/en/actions/automating-builds-and-tests/building-and-testing-go
+
+name: Release
+
+on:
+  push:
+    tags:
+      - '*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21.x'
+
+    - name: Build
+      run: |
+        go get -d -v
+        GOOS=linux GOARCH=amd64 go build -o build/amd64/linux/protoc-gen-php8
+        GOOS=linux GOARCH=arm64 go build -o build/arm64/linux/protoc-gen-php8
+        GOOS=darwin GOARCH=amd64 go build -o build/amd64/darwin/protoc-gen-php8
+        GOOS=darwin GOARCH=arm64 go build -o build/arm64/darwin/protoc-gen-php8
+        GOOS=windows GOARCH=amd64 go build -o build/amd64/windows/protoc-gen-php8.exe
+        GOOS=windows GOARCH=arm64 go build -o build/arm64/windows/protoc-gen-php8.exe
+
+    - name: release
+      uses: actions/create-release@v1
+      id: create_release
+      with:
+        draft: false
+        prerelease: false
+        release_name: ${{ steps.version.outputs.version }}
+        tag_name: ${{ github.ref }}
+#        body_path: CHANGELOG.md
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+
+    # linux
+    - name: upload linux amd64 artifact
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./build/amd64/linux/protoc-gen-php8
+        asset_name: protoc-gen-php8-linux-amd64
+        asset_content_type: application/octet-stream
+
+    - name: upload linux arm64 artifact
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./build/arm64/linux/protoc-gen-php8
+        asset_name: protoc-gen-php8-linux-arm64
+        asset_content_type: application/octet-stream
+
+    # darwin
+    - name: upload darwin amd64 artifact
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./build/amd64/darwin/protoc-gen-php8
+        asset_name: protoc-gen-php8-darwin-amd64
+        asset_content_type: application/octet-stream
+
+    - name: upload darwin arm64 artifact
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./build/arm64/darwin/protoc-gen-php8
+        asset_name: protoc-gen-php8-darwin-arm64
+        asset_content_type: application/octet-stream
+
+    # windows
+    - name: upload windows amd64 artifact
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./build/amd64/windows/protoc-gen-php8
+        asset_name: protoc-gen-php8-windows-amd64
+        asset_content_type: application/octet-stream
+
+    - name: upload windows arm64 artifact
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ github.token }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./build/arm64/windows/protoc-gen-php8
+        asset_name: protoc-gen-php8-windows-arm64
+        asset_content_type: application/octet-stream
